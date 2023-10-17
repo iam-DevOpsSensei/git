@@ -822,6 +822,29 @@ test_expect_success 'overflow during generation version upgrade' '
 	)
 '
 
+test_expect_success 'commit exists in commit-graph but not in object database' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+
+		test_commit A &&
+		test_commit B &&
+		test_commit C &&
+		git commit-graph write --reachable &&
+
+		# Corrupt the repository by deleting the intermittent commit
+		# object. Commands should notice that this object is absent and
+		# thus that the repository is corrupt even if the commit graph
+		# exists.
+		oid=$(git rev-parse B) &&
+		rm .git/objects/"$(test_oid_to_path "$oid")" &&
+
+		test_must_fail git rev-parse HEAD~2 2>error &&
+		grep "error: commit $oid exists in commit-graph but not in the object database" error
+	)
+'
+
 corrupt_chunk () {
 	graph=full/.git/objects/info/commit-graph &&
 	test_when_finished "rm -rf $graph" &&

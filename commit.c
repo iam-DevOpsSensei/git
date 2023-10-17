@@ -573,8 +573,13 @@ int repo_parse_commit_internal(struct repository *r,
 		return -1;
 	if (item->object.parsed)
 		return 0;
-	if (use_commit_graph && parse_commit_in_graph(r, item))
+	if (use_commit_graph && parse_commit_in_graph(r, item)) {
+		if (!has_object(r, &item->object.oid, 0))
+			return quiet_on_missing ? -1 :
+				error(_("commit %s exists in commit-graph but not in the object database"),
+				      oid_to_hex(&item->object.oid));
 		return 0;
+	}
 
 	if (oid_object_info_extended(r, &item->object.oid, &oi, flags) < 0)
 		return quiet_on_missing ? -1 :
